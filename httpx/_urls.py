@@ -188,7 +188,12 @@ class URL:
         host: str = self._uri_reference.host
 
         if host.startswith("xn--"):
-            host = idna.decode(host)
+            try:
+                host = idna.decode(host)
+            except idna.IDNAError:
+                # Invalid punycode hostname. Return the host as-is,
+                # rather than raising an exception.
+                pass
 
         return host
 
