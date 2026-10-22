@@ -405,10 +405,21 @@ def normalize_port(port: str | int | None, scheme: str) -> int | None:
     if port is None or port == "":
         return None
 
+    # Ports must be an ASCII decimal number. Note that `int(...)` will
+    # otherwise accept inputs such as " 80", "+80", "80_0", or non-ASCII
+    # digits, which should be treated as invalid.
+    if isinstance(port, str) and not (port.isascii() and port.isdigit()):
+        raise InvalidURL(f"Invalid port: {port!r}")
+
     try:
         port_as_int = int(port)
     except ValueError:
-        raise InvalidURL(f"Invalid port: {port!r}")
+        raise InvalidURL(f"Invalid port: {port!r}") from None
+
+    # Ports are limited to the range 0-65535.
+    # See https://url.spec.whatwg.org/#url-miscellaneous
+    if not 0 <= port_as_int <= 65535:
+        raise InvalidURL(f"Port out of range: {port!r}")
 
     # See https://url.spec.whatwg.org/#url-miscellaneous
     default_port = {"ftp": 21, "http": 80, "https": 443, "ws": 80, "wss": 443}.get(
